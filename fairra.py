@@ -53,8 +53,8 @@ def Get_Objective_Value(query, rankings):
     return median_cost
 
 #helper function to return the weighted tournament corresponding to the rank aggregation problem
-def Get_Frac_Tournament(element_count, rankings):
-    assert element_count == len(rankings[0])
+def Get_Frac_Tournament(rankings):
+    element_count = len(rankings[0])
     frac_tournament = np.ndarray((element_count, element_count))
     for i in range(element_count):
         for j in range(element_count):
@@ -69,11 +69,6 @@ def Get_Frac_Tournament(element_count, rankings):
             frac_tournament[i][j] = frac_tournament[i][j] / len(rankings)
 
     return frac_tournament
-    
-####
-####
-# End of helper functions
-####
     
 #helper function to recover ordering from acyclic tournament
 def Topological_Sort(adj):
@@ -103,6 +98,12 @@ def Topological_Sort(adj):
                     queue.append(j)
 
     return topo_sort
+    
+####
+####
+# End of helper functions
+####
+
     
 #Input: set of rankings
 #Returns: the optimal median ranking by using an ILP
@@ -141,10 +142,6 @@ def NormalILP(rankings):
     edge_weight_coeff = np.empty(element_count * element_count)
     for i in range(element_count):
         for j in range(element_count):
-            #if frac_tournament[i][j] > frac_tournament[j][i]:
-            #    edge_weight_coeff[i * element_count + j] = frac_tournament[i][j] - frac_tournament[j][i]
-            #else:
-            #    edge_weight_coeff[i * element_count + j] = 0
             edge_weight_coeff[i * element_count + j] = frac_tournament[i][j]
             
     problem = cp.Problem(cp.Minimize(edge_weight_coeff @ X), constraints)
@@ -165,18 +162,10 @@ def NormalILP(rankings):
     print("Objective value: ", Get_Objective_Value(topo_sorted, rankings))
     return topo_sorted
 
-
-####
-####
-#End Of Helper functions
-####
-####
-
 #FAIR ILP
-#Takes in rankings and attributes
+#Takes in the fairness parameters, rankings, mapping of elements to attributes
 #Returns the optimal fair median ranking
-#Fairness bounds taken from global variables
-def FairILP(rankings, id_attribute, num_attributes):
+def FairILP(alphas, betas, rankings, id_attribute, num_attributes):
 
     start_time = time.time()
     element_count = len(rankings[0])
@@ -241,10 +230,6 @@ def FairILP(rankings, id_attribute, num_attributes):
     edge_weight_coeff = np.empty(element_count * element_count)
     for i in range(element_count):
         for j in range(element_count):
-            #if frac_tournament[i][j] > frac_tournament[j][i]:
-            #    edge_weight_coeff[i * element_count + j] = frac_tournament[i][j] - frac_tournament[j][i]
-            #else:
-            #    edge_weight_coeff[i * element_count + j] = 0
             edge_weight_coeff[i * element_count + j] = frac_tournament[i][j]
             
     problem = cp.Problem(cp.Minimize(edge_weight_coeff.T @ X), constraints)
@@ -272,8 +257,11 @@ def FairILP(rankings, id_attribute, num_attributes):
     end_time = time.time()
     print("Fair ILP took time " + str(end_time - start_time) + " seconds.")
     return obj_cost
-    
-def ourAlgo(rankings, id_attribute, num_attributes):
+
+#This implementation of our algorithm uses ILP to solve the two partitions optimally
+#Think of this as the 'best case' scenario possible.
+#Takes in the fairness parameters, rankings, mapping of elements to attributes
+def ourAlgo(alphas, betas, rankings, id_attribute, num_attributes):
 
     element_count = len(rankings[0])
 
@@ -398,9 +386,9 @@ def ourAlgo(rankings, id_attribute, num_attributes):
 
     #print("Our algorithm ranking is: ", output_ranking)
 
-#This implementation uses KWIKSORT to solve the standard rank aggregation problem
-#For details, see Ailon, Newman, Charikar 2007
-def ourAlgo_KS(rankings, id_attribute, num_attributes):
+#This implementation of our algorithm uses KWIKSORT to solve the standard rank aggregation problem
+#For details on KWIKSORT, see Ailon, Newman, Charikar 2007
+def ourAlgo_KS(alphas, betas, rankings, id_attribute, num_attributes):
     element_count = len(rankings[0])
 
     #STEP 1: determining top-k elements
@@ -533,6 +521,8 @@ def ourAlgo_KS(rankings, id_attribute, num_attributes):
 
     return obj_cost
 
+##Helper functions for KWIKSORT
+##Need to take bettter of best from input, and the kwiksort algorithm
 def Best_From_Input(rankings):
     best_rank = []
     obj_value = 1e9
@@ -567,7 +557,7 @@ def DoKwiksort(elements, frac_tournament):
 
 #This algorithm is the 3-approximation best from input
 #From Chakraborty et al. 2022
-def BFI_Algo(rankings, id_attribute, num_attributes):
+def BFI_Algo(alphas, betas, rankings, id_attribute, num_attributes):
     element_count = len(rankings[0])
 
     start_time = time.time()
@@ -584,11 +574,12 @@ def BFI_Algo(rankings, id_attribute, num_attributes):
         if median_cost < obj_value:
             obj_value = median_cost
             best_rank = fair_rank
-    print("Naive algo objective value is: ", obj_value)
-    #print("Naive algo rank is: ", best_rank)
-    print("Naive algo took time " + str(time.time() - start_time) + " seconds.")
+    print("Best From Input algo objective value is: ", obj_value)
+    #print("Best From Input algo rank is: ", best_rank)
+    print("Best From Input took time " + str(time.time() - start_time) + " seconds.")
     return obj_value
 
+#Helper function to find the closest fair ranking
 def Closest_Fair_Ranking(rank, id_attribute, num_attributes):
     elements_taken = [0] * num_attributes
     fair_rank = []
@@ -722,7 +713,7 @@ def Get_Movielens():
 ####
 #Setup to run algorithms here
 
-
+#This shows an example of how to run the algorithm on one of the input datasets.
 alphas = [0.6, 0.4]
 betas = [1, 1]
 TOPK = 30
@@ -737,10 +728,10 @@ rankings = rankings[:CUTOFFN]
 print(alphas)
 
 print("Optimal Fair:")
-#FairILP(rankings, attributes_map, num_attributes)
+#FairILP(alphas, betas, rankings, attributes_map, num_attributes)
 print("------------------------")
 print("Our algorithm + ILP:")
-ourAlgo(rankings, attributes_map, num_attributes)
+ourAlgo(alphas, betas, rankings, attributes_map, num_attributes)
 print("------------------------")
 
 print("Our algorithm + KS:")
@@ -750,7 +741,7 @@ seed_val = 1
 for alpha in alphas:
     seed_val *= alpha * 100
 rng = np.random.default_rng([9, TOPK, CUTOFFN, len(rankings[0]), int(seed_val)])
-ourAlgo_KS(rankings, attributes_map, num_attributes)
+ourAlgo_KS(alphas, betas, rankings, attributes_map, num_attributes)
 print("------------------------")
 print("Best From Input algorithm")
-BFI_Algo(rankings, attributes_map, num_attributes)
+BFI_Algo(alphas, betas, rankings, attributes_map, num_attributes)

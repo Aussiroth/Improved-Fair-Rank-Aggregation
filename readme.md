@@ -1,20 +1,31 @@
-Folder structure and files:
+This is the repository for the paper 'Improved Fair Rank Aggregation Under Fairness Constraints'
 
-fairaggregation.ipynb is the main notebook with code for replicating results. It contains
-- Functions for reading in the data sources
-- Implementation of an ILP solver for the optimal, our algorithm and the previous state of the art.
-- Examples for how to read in an instance and solve it with each algorithm implementation
+The full paper can be found on arxiv [at this link](https://arxiv.org/abs/2505.10006).
 
-The football folder contains the data for the football dataset. Each of the instances are stored within one CSV file each, week1 to week16.
-The attributes.csv file contains the mapping for players to groups, for all instances (that is, always use this file for the mapping, for all instances)
+## Requirements/Dependencies
 
-The movielens folder contains the data for the movielens dataset. unique_200.txt is the original dataset. movielens.txt is identical in data, but preprocessed to have similar structure as the football dataset.
-movielens_reduced is the reduced dataset with 58 movies, instead of the original 268. We use this as the input instance for experiments in the paper on the 'reduced movielens' dataset.
-The attributes.csv file again contains the mapping for movies to groups, for the corresponding input instance.
-The Clean_Movielens.ipynb notebook contains the code that preprocessed the data from the raw form into the form used for input to our implementations.
+The code was tested to work using the following versions.
+- Python 3.12.
+- Jupyterlab 4.1.5
+- CVXPY 1.4.2
+- PySCIPOpt 5.1.1
 
-Note that we have implemented Kwiksort as a subroutine for solving standard rank aggregation in our algorithm. It should be noted that it is a randomized algorithm.
-To exactly reproduce our results, the numpy default rng generator should be seeded with a specific array of values.
-The array should be [dataset, k, n, d, alpha_product] for the football dataset, and [k, n, d, alpha_product] for the movielens dataset.
-alpha_product is equal to the product of alpha_0 to alpha_g, multiplied by 100 each (to get a large enough, hopefully unique, integer from this process)
-This selection was to prevent the same seed from being used for each experiment when changing various parameters of the input.
+Other integer linear program solvers should also work, and may be faster.
+
+## Code
+
+The code can be found in both a Jupyter notebook, ``fairaggregation.ipynb`` as well as a standalone python script ``fairra.py``.
+
+In particular, we have three implementations - The Best From Input [Chakraborty et al.], our paper's algorithm using Kwiksort as the fair rank aggregation subroutine (as a practical implementation), and our paper's algorithm using ILP as the subroutine (as the best-case scenario).
+
+We also provide an ILP model that solves the fair rank aggregation optimally which can be used to find the optimal solution as a basis for comparison.
+
+## Data
+
+The ``football`` folder contains the data for the football dataset. Each instance of rank aggregation are stored within one CSV file each, ``week1.csv`` to ``week16.csv``.
+The ``attributes.csv`` file contains the mapping for players to attributes (groups), for all of the instances.
+
+The ``movielens`` folder contains the data for the movielens dataset. ``unique_200.txt`` contains the original dataset. ``movielens.txt`` is identical in data, but preprocessed to have similar structure as the football dataset for ease of use.
+``movielens_reduced.txt`` is the reduced dataset with 58 movies, instead of the original 268. We use this as the input instance for experiments in the paper on the 'reduced movielens' dataset.
+The ``attributes.csv`` file contains the mapping for movies to groups, for the corresponding input instance.
+The ``clean_Movielens.ipynb`` notebook contains the code that preprocessed the data from the raw form into the form used for input to our implementations.
